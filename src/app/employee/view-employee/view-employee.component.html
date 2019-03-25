@@ -1,0 +1,110 @@
+<label class="navbar-brand">Employee Details</label>
+<div *ngIf="employee">
+  <div class="row">
+    <label class="col-md-2 font-bold">First Name</label>
+    <label class="col-md-4 form-control-label">{{ employee.FirstName }}</label>
+  </div>
+
+  <div class="row">
+    <label class="col-md-2 font-bold">Last name</label>
+    <label class="col-md-4 form-control-label">{{ employee.LastName }}</label>
+  </div>
+
+  <div class="row">
+    <label class="col-md-2 font-bold">DOB</label>
+    <label class="col-md-4 form-control-label">{{ employee.DOB }}</label>
+  </div>
+
+  <div class="row">
+    <label class="col-md-2 font-bold">Address</label>
+    <label class="col-md-4 form-control-label">{{ employee.Address }}</label>
+  </div>
+
+  <div class="row">
+    <label class="col-md-2 font-bold">Age</label>
+    <label class="col-md-4 form-control-label">{{ employee.Age }}</label>
+  </div>
+
+  <div class="row">
+    <div class="col-md-11">
+      <input
+        type="button"
+        (click)="goBack()"
+        value="Back"
+        class="btn btn-primary pull-left"
+      />
+    </div>
+    <button
+      style="margin-left: 1em"
+      [routerLink]="['/create', employee.Id]"
+      class="btn btn-primary pull-right"
+    >
+      Edit
+    </button>
+  </div>
+</div>
+
+<!-- <form #empform="ngForm" (ngSubmit)="save(empform)">
+  <div class="row">
+    <div class="col-md-6">
+      <div class="form-group">
+        <Label class="form-control-label">First Name</Label>
+        <input name="firstname" required
+          class="form-control"
+          type="text"
+          [(ngModel)]="employee.FirstName"
+        />
+      </div>
+      <div class="form-group">
+        <Label class="form-control-label">Last Name</Label>
+        <input name="lastname" required
+          class="form-control"
+          type="text"
+          [(ngModel)]="employee.LastName"
+        />
+      </div>
+      <div class="form-group">
+        <Label class="form-control-label">Age</Label>
+        <input name="age" required class="form-control" type="text" [(ngModel)]="employee.Age" />
+      </div>
+      <div class="form-group">
+        <Label class="form-control-label">Gender</Label>
+        <input value="male" name="gender" required type="radio" [(ngModel)]="employee.Gender"/>Male
+        <input value="female" name="gender" required type="radio" [(ngModel)]="employee.Gender" />Female
+        <div *ngIf="gender.invalid"> 
+            Gender required. 
+        </div> 
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="form-group">
+        <Label class="form-control-label">Address</Label>
+        <input name="address" required
+          class="form-control"
+          type="text"
+          [(ngModel)]="employee.Address"
+        />
+      </div>
+      <div class="form-group">
+        <Label class="form-control-label">DOB</Label>
+        <input name="dob" required class="form-control" type="date" [(ngModel)]="employee.DOB" />
+      </div>
+      <div class="form-group">
+        <Label class="form-control-label">Select City</Label>
+        <select name="city" required class="form-control" [(ngModel)]="employee.City">
+          <option [value]="-1">Select City</option>
+          <option value="1">Pune</option>
+          <option value="2">Mumbai</option>
+          <option value="3">Banglore</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-11">
+      <input type="button" (click)="back()" class="btn-primary" value="Cancel"/>
+    </div>
+    <div class="col-md-1"><button [disabled]="empform.invalid" type="submit" class="btn-primary">Save</button></div>
+  </div>
+</form> -->

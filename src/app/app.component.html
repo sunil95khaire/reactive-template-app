@@ -1,0 +1,10 @@
+<!--The content below is only a placeholder and can be replaced.-->
+<div class=container>
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a routerLink="/home">Employee List </a>
+    <a class="left-margin" [routerLink]="['/create', 0]"> Create Employee</a>
+    <a class="left-margin" [routerLink]="['/template']"> Template Form</a>
+    <a class="left-margin" [routerLink]="['/reactive']"> Reactive Form</a>
+  </nav>
+  <router-outlet></router-outlet>
+</div>
