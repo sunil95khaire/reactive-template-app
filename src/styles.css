@@ -1,0 +1,21 @@
+/* You can add global styles to this file, and also import other style files */
+.left-margin{
+    margin-left: 10px;
+}
+
+.font-bold{
+    font-weight: bold;
+}
+
+table {
+    border-collapse: collapse;
+}
+table, th, td {
+    border: 1px solid black;
+}
+.error {
+    color: red;
+}
+.success {
+    color: green;
+} 
