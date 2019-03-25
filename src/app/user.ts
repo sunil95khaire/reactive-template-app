@@ -3,4 +3,5 @@ export class User {
 	gender: string;
 	isMarried: boolean = false;
 	isTCAccepted: boolean;
+	// added test comment
 }
