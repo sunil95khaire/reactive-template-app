@@ -1,0 +1,900 @@
+styles.css
+/* You can add global styles to this file, and also import other style files */
+.left-margin{
+    margin-left: 10px;
+}
+
+.font-bold{
+    font-weight: bold;
+}
+
+tr a { 
+    cursor: pointer; 
+}
+
+table {
+    border-collapse: collapse;
+}
+table, th, td {
+    border: 1px solid black;
+}
+.error {
+    color: red;
+}
+.success {
+    color: green;
+} 
+========================
+index.html
+<link href="http://maxcdn.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css" rel="stylesheet">
+========================
+export class User {
+    userName: string;
+	gender: string;
+	isMarried: boolean = false;
+	isTCAccepted: boolean;
+}
+
+======================== appmodule.ts
+import { BrowserModule } from '@angular/platform-browser';
+import { NgModule } from '@angular/core';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
+
+import { AppComponent } from './app.component';
+import { EmployeeComponent } from './employee/employee.component';
+import { AppRoutingModule } from './app-routing.module';
+import { ViewEmployeeComponent } from './employee/view-employee/view-employee.component';
+import { CreateEmployeeComponent } from './employee/create-employee/create-employee.component';
+import { EmployeeService } from './employee/employee.service';
+import { ReactiveFormComponent } from './reactive/reactive-form/reactive-form.component';
+import { TemplateFormComponent } from './template/template-form/template-form.component';
+import { GridexampleComponent } from './gridexample/gridexample.component';
+
+@NgModule({
+  declarations: [
+    AppComponent,
+    EmployeeComponent,
+    ViewEmployeeComponent,
+    CreateEmployeeComponent,
+    ReactiveFormComponent,
+    TemplateFormComponent,
+    GridexampleComponent
+  ],
+  imports: [
+    BrowserModule,
+    FormsModule,
+    ReactiveFormsModule,
+    HttpClientModule,
+    AppRoutingModule
+  ],
+  providers: [EmployeeService],
+  bootstrap: [AppComponent]
+})
+export class AppModule { }
+
+========================app.component.html
+
+<div class=container>
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a routerLink="/home">Employee List </a>
+    <a class="left-margin" [routerLink]="['/create', 0]"> Create Employee</a>
+    <a class="left-margin" [routerLink]="['/template']"> Template Form</a>
+    <a class="left-margin" [routerLink]="['/reactive']"> Reactive Form</a>
+    <a class="left-margin" routerLink="/grid"> Grid Ex</a>
+  </nav>
+  <router-outlet></router-outlet>
+</div>
+========================app.routing.ts
+import { NgModule } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Routes, RouterModule } from '@angular/router';
+import { ViewEmployeeComponent } from './employee/view-employee/view-employee.component';
+import { EmployeeComponent } from './employee/employee.component';
+import { CreateEmployeeComponent } from './employee/create-employee/create-employee.component';
+import { TemplateFormComponent } from './template/template-form/template-form.component';
+import { ReactiveFormComponent } from './reactive/reactive-form/reactive-form.component';
+import { GridexampleComponent } from './gridexample/gridexample.component';
+
+const routes : Routes = [
+  { path: 'home', component: EmployeeComponent },
+  { path: 'reactive', component: ReactiveFormComponent },
+  { path: 'template', component: TemplateFormComponent },
+  { path: 'grid', component: GridexampleComponent },
+  { path: 'detail/:id', component: ViewEmployeeComponent },
+  { path: 'create/:id', component: CreateEmployeeComponent },
+  { path: '', redirectTo: '/home', pathMatch:'full' }
+];
+
+@NgModule({
+  declarations: [],
+  imports: [
+    CommonModule,
+    RouterModule.forRoot(routes)
+  ],
+  exports:[RouterModule]
+})
+
+export class AppRoutingModule { }
+
+========================employee.json
+[
+    {
+        "Id": 1,
+        "FirstName": "Sunil",
+        "LastName": "Khaire",
+        "DOB": "2018-01-01",
+        "Address": "test",
+        "Age": 23
+    },
+ ]
+========================
+export class IEmployee {
+    Id: number;
+    FirstName: string;
+    LastName: string;
+    DOB: string;
+    Address: string;
+    Age: number;
+    Gender: string;
+}
+
+======================== employee.service.ts
+
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { IEmployee } from './employee';
+import { Observable, throwError, of } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class EmployeeService {
+  private _employeeUrl = './api/employee/employee.json';
+  employess: IEmployee[] = [];
+  isLoad: boolean = false;
+  constructor(private _http: HttpClient) { }
+
+  getEmployees(): Observable<IEmployee[]> {
+    if(!this.isLoad) {
+      this.isLoad = true; 
+      return this._http.get<IEmployee[]>(this._employeeUrl).pipe(tap(
+        _emp => this.employess = _emp
+      ), catchError(this.handleError));       
+    }     
+      
+    return of(this.employess);
+  }
+
+  addEmployee(employee){
+    employee.Id = this.employess[this.employess.length - 1].Id + 1;
+    this.employess.push(employee);    
+  }
+
+  updateEmployee(employee){
+    const emp = this.employess.find(e => e.Id == employee.Id);
+    emp.FirstName = employee.FirstName;
+    emp.LastName = employee.LastName;
+    emp.Address = employee.Address;
+    emp.Age = employee.Age;
+  }
+
+  getEmployee(id): IEmployee {
+    return this.employess.find(e => e.Id == id);
+  }
+
+  private handleError(err) {
+    return throwError(err);
+  }
+}
+
+========================employee-list.component.ts
+
+import { Component, OnInit } from "@angular/core";
+import { EmployeeService } from "./employee.service";
+import { IEmployee } from "./employee";
+
+@Component({
+  selector: "app-employee",
+  templateUrl: "./employee.component.html",
+  styleUrls: ["./employee.component.css"]
+})
+export class EmployeeComponent implements OnInit {
+  employees: IEmployee[];
+  filteredemployees: IEmployee[];
+  errorMessage: string = "";
+  filterBy: string;
+
+  sortType: string;
+  sortReverse: boolean = false;
+
+  constructor(private _empService: EmployeeService) {}
+
+  ngOnInit() {
+    this._empService.getEmployees().subscribe(
+      emp => {
+        this.employees = emp;
+        this.filteredemployees = this.employees;
+        this.sortOrders('FirstName');
+      },
+      error => (this.errorMessage = <any>error)
+    );
+  }
+
+  Delete(id) {
+    this.filteredemployees = this.filteredemployees.filter(e => e.Id != id);
+  }
+
+  Search() {
+    this.filteredemployees = this.employees.filter(
+      (emp: IEmployee) =>
+        emp.FirstName.toLocaleLowerCase().indexOf(
+          this.filterBy.toLocaleLowerCase()
+        ) !== -1
+    );
+  }
+
+  filterOrders() {
+    this.filteredemployees = this.employees.filter(o =>
+      Object.keys(o).some(k => {
+        if (typeof o[k] === 'string')
+          return o[k].toLowerCase().includes(this.filterBy.toLowerCase());
+      })
+    );
+  }
+
+  sortOrders(property) {
+    this.sortType = property;
+    this.sortReverse = !this.sortReverse;
+    this.filteredemployees.sort(this.dynamicSort(property));
+  }
+
+  dynamicSort(property) {
+    let sortOrder = -1;
+
+    if (this.sortReverse) {
+        sortOrder = 1;
+    }
+
+    return function(a, b) {
+      let result =
+        a[property] < b[property] ? -1 : a[property] > b[property] ? 1 : 0;
+      return result * sortOrder;
+    };
+  }
+}
+
+========================employee.component.html
+
+<label class="navbar-brand">Employee List</label>
+
+<div class="row">
+  <div class="col-md-3 form-group">
+    <label class="control-label">Name Search</label>
+    <input class="form-control" type="text" [(ngModel)]="filterBy"  (keyup)="Search()" />
+  </div>
+  <div class="col-md-2">
+    <input
+      type="button"
+      value="Search"
+      class="btn btn-primary"
+      style="margin-top: 2em;"
+      (click)="Search()"
+    />
+  </div>
+</div>
+
+<div class="table-responsive">
+  <table
+    class="table table-bordered"
+    *ngIf="filteredemployees && filteredemployees.length"
+  >
+    <thead style="border-bottom: 0">
+      <tr>
+        <th>
+          <a style="color:blue" [href]="" (click)="sortOrders('FirstName')">
+            Name
+            <span
+              *ngIf="sortType == 'FirstName' && !sortReverse"
+              class="fa fa-caret-down"
+            ></span>
+            <span
+              *ngIf="sortType == 'FirstName' && sortReverse"
+              class="fa fa-caret-up"
+            ></span>
+          </a>
+        </th>
+        <th><a style="color:blue" [href]="" (click)="sortOrders('LastName')">
+          Surname
+          <span
+            *ngIf="sortType == 'LastName' && !sortReverse"
+            class="fa fa-caret-down"
+          ></span>
+          <span
+            *ngIf="sortType == 'LastName' && sortReverse"
+            class="fa fa-caret-up"
+          ></span>
+        </a></th>
+        <th>DOB</th>
+        <th>Address</th>
+        <th>Age</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let employee of filteredemployees"
+        (click)="employeeClick(employee.Id)"
+      >
+        <td>
+          <a routerLink="/detail/{{ employee.Id }}">{{ employee.FirstName }}</a>
+        </td>
+        <td>{{ employee.LastName }}</td>
+        <td>{{ employee.DOB | date: "dd-MM-yyyy" }}</td>
+        <td>{{ employee.Address }}</td>
+        <td>{{ employee.Age }}</td>
+        <td>
+          <button class="btn-danger" (click)="Delete(employee.Id)">X</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div *ngIf="!(filteredemployees && filteredemployees.length)">
+    No Employees
+  </div>
+</div>
+
+======================== viewemployee.ts
+import { Component, OnInit } from '@angular/core';
+import { IEmployee } from '../employee';
+import { EmployeeService } from '../employee.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Location } from '@angular/common';
+
+@Component({
+  selector: 'app-view-employee',
+  templateUrl: './view-employee.component.html',
+  styleUrls: ['./view-employee.component.css']
+})
+export class ViewEmployeeComponent implements OnInit {
+
+  employee: IEmployee; // = new IEmployee();
+  employees: IEmployee[];
+
+  constructor(private service: EmployeeService, private route: ActivatedRoute,
+    private router: Router, private location: Location) { }
+
+  ngOnInit() {
+    const id = this.route.snapshot.paramMap.get('id');
+    this.employee = this.service.getEmployee(id);
+  }
+
+  goBack(){
+    this.location.back();
+  }
+
+  editEmployee() {
+    this.router.navigate(['/create', this.employee.Id]);
+  }
+
+  save(emp) {
+    console.log(emp);
+  }
+
+  back(){
+    this.location.back();
+  }
+}
+
+======================== view-employee.component.html
+
+<label class="navbar-brand">Employee Details</label>
+<div *ngIf="employee">
+  <div class="row">
+    <label class="col-md-2 font-bold">First Name</label>
+    <label class="col-md-4 form-control-label">{{ employee.FirstName }}</label>
+  </div>
+
+  <div class="row">
+    <label class="col-md-2 font-bold">Last name</label>
+    <label class="col-md-4 form-control-label">{{ employee.LastName }}</label>
+  </div>
+
+  <div class="row">
+    <label class="col-md-2 font-bold">DOB</label>
+    <label class="col-md-4 form-control-label">{{ employee.DOB }}</label>
+  </div>
+
+  <div class="row">
+    <label class="col-md-2 font-bold">Address</label>
+    <label class="col-md-4 form-control-label">{{ employee.Address }}</label>
+  </div>
+
+  <div class="row">
+    <label class="col-md-2 font-bold">Age</label>
+    <label class="col-md-4 form-control-label">{{ employee.Age }}</label>
+  </div>
+
+  <div class="row">
+    <div class="col-md-11">
+      <input
+        type="button"
+        (click)="goBack()"
+        value="Back"
+        class="btn btn-primary pull-left"
+      />
+    </div>
+    <button
+      style="margin-left: 1em"
+      [routerLink]="['/create', employee.Id]"
+      class="btn btn-primary pull-right"
+    >
+      Edit
+    </button>
+  </div>
+</div>
+
+<!-- <form #empform="ngForm" (ngSubmit)="save(empform)">
+  <div class="row">
+    <div class="col-md-6">
+      <div class="form-group">
+        <Label class="form-control-label">First Name</Label>
+        <input name="firstname" required
+          class="form-control"
+          type="text"
+          [(ngModel)]="employee.FirstName"
+        />
+      </div>
+      <div class="form-group">
+        <Label class="form-control-label">Last Name</Label>
+        <input name="lastname" required
+          class="form-control"
+          type="text"
+          [(ngModel)]="employee.LastName"
+        />
+      </div>
+      <div class="form-group">
+        <Label class="form-control-label">Age</Label>
+        <input name="age" required class="form-control" type="text" [(ngModel)]="employee.Age" />
+      </div>
+      <div class="form-group">
+        <Label class="form-control-label">Gender</Label>
+        <input value="male" name="gender" required type="radio" [(ngModel)]="employee.Gender"/>Male
+        <input value="female" name="gender" required type="radio" [(ngModel)]="employee.Gender" />Female
+        <div *ngIf="gender.invalid"> 
+            Gender required. 
+        </div> 
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="form-group">
+        <Label class="form-control-label">Address</Label>
+        <input name="address" required
+          class="form-control"
+          type="text"
+          [(ngModel)]="employee.Address"
+        />
+      </div>
+      <div class="form-group">
+        <Label class="form-control-label">DOB</Label>
+        <input name="dob" required class="form-control" type="date" [(ngModel)]="employee.DOB" />
+      </div>
+      <div class="form-group">
+        <Label class="form-control-label">Select City</Label>
+        <select name="city" required class="form-control" [(ngModel)]="employee.City">
+          <option [value]="-1">Select City</option>
+          <option value="1">Pune</option>
+          <option value="2">Mumbai</option>
+          <option value="3">Banglore</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-11">
+      <input type="button" (click)="back()" class="btn-primary" value="Cancel"/>
+    </div>
+    <div class="col-md-1"><button [disabled]="empform.invalid" type="submit" class="btn-primary">Save</button></div>
+  </div>
+</form> -->
+
+======================== create-employee.component.ts
+
+import { Component, OnInit } from '@angular/core';
+import { IEmployee } from '../employee';
+import { EmployeeService } from '../employee.service';
+import { Router, ActivatedRoute } from '@angular/router';
+import { NgForm } from '@angular/forms';
+
+@Component({
+  selector: 'app-create-employee',
+  templateUrl: './create-employee.component.html',
+  styleUrls: ['./create-employee.component.css']
+})
+export class CreateEmployeeComponent implements OnInit {
+
+  employees: IEmployee[];  
+  errorMessage: string;  
+  isEdit: boolean;
+  id: string;
+
+  employee: IEmployee = new IEmployee();
+
+  constructor(
+    private service: EmployeeService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) {}
+
+  ngOnInit() {
+    //const id = this.route.snapshot.paramMap.get("id");
+    this.route.params.subscribe(params => {
+      this.id = params['id'];
+      this.initialiseState(); // reset and set based on new parameter this time
+  });
+
+    this.isEdit = this.id != "0" && this.id != "null";
+    if (this.isEdit) {
+      this.employee = this.service.getEmployee(this.id);
+    }
+  }
+
+  initialiseState(){
+    this.employee = new IEmployee();
+  }
+
+  savePatient(empForm: NgForm): void {
+    var emp = Object.assign({}, this.employee);
+    this.isEdit ? this.service.updateEmployee(emp) : this.service.addEmployee(emp);
+    this.navigateToEmployeeList();
+  }
+
+  navigateToEmployeeList() {
+    this.router.navigate(["/home"]);
+  }
+}
+
+======================== create-employee.component.html
+
+<label class="navbar-brand">Add Employee</label>   
+<div *ngIf='employee'></div>
+<form #empForm="ngForm" (ngSubmit)="savePatient(empForm)">
+  <div class="row">
+    <div class="col-md-6">
+      <div class="form-group" [class.was-validated]="firstname.invalid && firstname.touched">
+        <label for="firstname" class="form-control-label">First Name</label>
+        <input  type="text" name="firstname" placeholder="Enter First Name" required class="form-control"
+          id="firstname" [(ngModel)]="employee.FirstName" #firstname="ngModel">
+        <div class="invalid-feedback" *ngIf="firstname.invalid && firstname.touched">Name is mandatory.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="patientDob" class="form-control-label">Birth Date</label>
+        <input type="date" name="patientDob" placeholder="DD/MM/YYYY" required class="form-control" 
+          id="patientDob" [(ngModel)]="employee.DOB"
+          #patientDob="ngModel">
+      </div>
+
+      <div class="form-group" [class.was-validated]="age.invalid && age.touched">
+        <label for="age" class="form-control-label">Age</label>
+        <input  type="text" name="age" placeholder="Enter Age" required class="form-control"
+          id="age" [(ngModel)]="employee.Age" #age="ngModel">
+        <div class="invalid-feedback" *ngIf="age.invalid && age.touched">Age is mandatory.</div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="form-group" [class.was-validated]="surNameControl.invalid && surNameControl.touched">
+        <label for="surName" class="form-control-label">Last Name</label>
+        <input  type="text" name="surName" placeholder="Enter Last Name" required class="form-control"
+          id="surName" [(ngModel)]="employee.LastName" #surNameControl="ngModel">
+        <div class="invalid-feedback" *ngIf="surNameControl.invalid && surNameControl.touched">LastName is mandatory.</div>
+      </div>
+
+      <div class="form-group" [class.was-validated]="address.invalid && address.touched">
+        <label for="address" class="form-control-label">Address</label>
+        <input  type="text" name="address" placeholder="Enter Address" required class="form-control"
+          id="address" [(ngModel)]="employee.Address" #address="ngModel">
+        <div class="invalid-feedback" *ngIf="address.invalid && address.touched">Gender is mandatory.</div>
+      </div>
+
+      <!-- <div class="form-group" [class.was-validated]="city.invalid && city.touched">
+        <label for="city" class="form-control-label">City</label>
+        <select id="city" name="city" required class="form-control" [(ngModel)]="employee.CityId" #city="ngModel">
+          <option [value]="-1">Select City</option>
+          <option [value]="city.Id" *ngFor="let city of cities">{{city.Name}}</option>
+        </select>
+        <div class="invalid-feedback" *ngIf="city.invalid && city.touched">City is mandatory.</div>
+      </div> -->
+    </div>
+  </div>
+
+  <div class="row">
+    <div class=col-md-11>
+      <input type="button" (click)="navigateToEmployeeList()" value="Cancel" class="btn btn-primary pull-left" />
+    </div>
+    <button style="margin-left: 1em" [disabled]="empForm.invalid" type="submit" class="btn btn-primary pull-right">Save</button>
+  </div>
+
+<br>
+
+</form>
+
+======================== reactive-form.component.ts
+
+import { Component, OnInit } from "@angular/core";
+import { FormGroup, FormControl, Validators } from "@angular/forms";
+import { User } from "src/app/user";
+import { UserService } from "src/app/user.service";
+
+@Component({
+  selector: "app-reactive-form",
+  templateUrl: "./reactive-form.component.html",
+  styleUrls: ["./reactive-form.component.css"]
+})
+export class ReactiveFormComponent implements OnInit {
+  ngOnInit() {}
+
+  user = new User();
+  isValidFormSubmitted: boolean = null;
+
+  userForm = new FormGroup({
+    uname: new FormControl("", Validators.required),
+    gender: new FormControl("", Validators.required),
+    married: new FormControl(false),
+    tc: new FormControl("", Validators.requiredTrue)
+  });
+  
+  constructor(private userService: UserService) {}
+
+  onFormSubmit() {
+    this.isValidFormSubmitted = false;
+    if (this.userForm.invalid) {
+      return;
+    }
+    this.isValidFormSubmitted = true;
+    console.log(this.userForm.valid);
+    this.user.userName = this.userForm.value.uname; // this.userForm.get("uname").value;
+    this.user.gender = this.userForm.get("gender").value;
+    this.user.isMarried = this.userForm.get("married").value;
+    this.user.isTCAccepted = this.userForm.get("tc").value;
+    this.userService.createUser(this.user);
+    this.reset();
+  }
+
+  reset() {
+    this.userForm.reset({
+      married: false
+    });
+  }
+
+  setDefaultValues() {
+    this.userForm.patchValue({
+      uname: "Krishna",
+      gender: "male",
+      married: true
+    });
+  }
+}
+
+======================== reactive-form.component.html
+
+<h3>Reactive Form</h3>
+<p *ngIf="isValidFormSubmitted && userForm.pristine" [ngClass]="'success'">
+  Form submitted successfully.
+</p>
+<form [formGroup]="userForm" (ngSubmit)="onFormSubmit()">
+  <table>
+    <tr>
+      <td>Name:</td>
+      <td>
+        <input formControlName="uname" />
+        <div
+          *ngIf="
+            userForm.get('uname').invalid &&
+            isValidFormSubmitted != null &&
+            !isValidFormSubmitted
+          "
+          [ngClass]="'error'"
+        >
+          Name required.
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td>Gender:</td>
+      <td>
+        <input type="radio" value="male" formControlName="gender" /> Male
+        <input type="radio" value="female" formControlName="gender" /> Female
+        <div
+          *ngIf="
+            userForm.get('gender').invalid &&
+            isValidFormSubmitted != null &&
+            !isValidFormSubmitted
+          "
+          [ngClass]="'error'"
+        >
+          Gender required.
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td>Are you married?</td>
+      <td>
+        <input type="checkbox" formControlName="married" />
+      </td>
+    </tr>
+    <tr>
+      <td>Accept T & C</td>
+      <td>
+        <input type="checkbox" formControlName="tc" />
+        <div
+          *ngIf="
+            userForm.get('tc').invalid &&
+            isValidFormSubmitted != null &&
+            !isValidFormSubmitted
+          "
+          [ngClass]="'error'"
+        >
+          Accept T & C.
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <button>Submit</button>
+        <button type="button" (click)="setDefaultValues()">Set Default</button>
+        <button type="button" (click)="reset()">Reset</button>
+      </td>
+    </tr>
+  </table>
+</form>
+
+======================== template-form.component.ts
+
+import { Component, OnInit } from '@angular/core';
+import { NgForm } from '@angular/forms';
+import { UserService } from 'src/app/user.service';
+import { User } from 'src/app/user';
+
+@Component({
+  selector: 'app-template-form',
+  templateUrl: './template-form.component.html',
+  styleUrls: ['./template-form.component.css']
+})
+export class TemplateFormComponent implements OnInit {
+
+  ngOnInit() {
+  }
+
+  isValidFormSubmitted = false;
+	user = new User();
+  constructor(private userService: UserService) {	}
+  
+	onFormSubmit(form: NgForm) {
+	   this.isValidFormSubmitted = false;
+	   if(form.invalid){
+		  return;	
+	   } 	
+	   this.isValidFormSubmitted = true;
+	  //  this.user.userName = form.controls['uname'].value;
+	  //  this.user.gender = form.controls['gender'].value;
+	  //  this.user.isMarried = form.controls['married'].value;
+	  //  this.user.isTCAccepted = form.controls['tc'].value;
+	   this.userService.createUser(this.user);
+	   this.resetForm(form);
+  }
+  
+	resetForm(form: NgForm) {
+	   this.user = new User();	
+	   form.resetForm({
+		   married: false
+	   }); 
+  }
+  
+	setDefaultValues() {
+	   this.user.userName = 'Krishna';
+	   this.user.gender = 'male';
+	   this.user.isMarried = true;
+	   this.user.isTCAccepted = false;
+	}
+}
+
+======================== template-form.component.html
+
+<h3>Template Driven Form</h3>
+<p *ngIf="isValidFormSubmitted" [ngClass]="'success'">
+  Form submitted successfully.
+</p>
+<form #userForm="ngForm" (ngSubmit)="onFormSubmit(userForm)">
+  <table>
+    <tr>
+      <td>Name:</td>
+      <td>
+        <input
+          name="uname"
+          [(ngModel)]="user.userName"
+          required
+          #uname="ngModel"
+        />
+        <div
+          *ngIf="uname.invalid && userForm.submitted && !isValidFormSubmitted"
+          [ngClass]="'error'"
+        >
+          Name required.
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td>Gender:</td>
+      <td>
+        <input
+          type="radio"
+          value="male"
+          name="gender"
+          [(ngModel)]="user.gender"
+          required
+          #gender="ngModel"
+        />
+        Male
+        <input
+          type="radio"
+          value="female"
+          name="gender"
+          [(ngModel)]="user.gender"
+          required
+          #gender="ngModel"
+        />
+        Female
+        <div
+          *ngIf="gender.invalid && userForm.submitted && !isValidFormSubmitted"
+          [ngClass]="'error'"
+        >
+          Gender required.
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td>Are you married?</td>
+      <td>
+        <input type="checkbox" name="married" [(ngModel)]="user.isMarried" />
+      </td>
+    </tr>
+    <tr>
+      <td>Accept T & C</td>
+      <td>
+        <input
+          type="checkbox"
+          name="tc"
+          [(ngModel)]="user.isTCAccepted"
+          required
+          #tc="ngModel"
+        />
+        <div
+          *ngIf="tc.invalid && userForm.submitted && !isValidFormSubmitted"
+          [ngClass]="'error'"
+        >
+          Accept T & C.
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <button>Submit</button>
+        <button type="button" (click)="setDefaultValues()">Set Default</button>
+        <button type="button" (click)="resetForm(userForm)">Reset</button>
+      </td>
+    </tr>
+  </table>
+</form>
+
+========================
+========================
+========================
+========================
+========================
+========================
+========================
+========================
