@@ -1,5 +1,15 @@
 styles.css
+Add in angular.json file under assets tag : "src/api"
+
 /* You can add global styles to this file, and also import other style files */
+.negative-stock{
+    background-color: red;    
+}
+
+.positive-stock{
+    background-color: green;    
+}
+
 .left-margin{
     margin-left: 10px;
 }
@@ -890,10 +900,201 @@ export class TemplateFormComponent implements OnInit {
   </table>
 </form>
 
-========================
-========================
-========================
-========================
+======================== can-activate.guard.ts
+
+import { Injectable } from '@angular/core';
+import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot } from '@angular/router';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class CanactivateGuard implements CanActivate {
+  canActivate(
+    next: ActivatedRouteSnapshot,
+    state: RouterStateSnapshot): Observable<boolean> | Promise<boolean> | boolean {
+    return true;
+  }
+}
+
+======================== stock.service.ts
+
+ import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, throwError, BehaviorSubject, Subject } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
+import { IStock } from './stock';
+
+@Injectable({
+  providedIn: 'root'
+})
+
+export class StockService {
+  private _stockUrl = './api/stocks/stocks.json';
+
+  private messageSource = new BehaviorSubject('default message');
+  currentMessage = this.messageSource.asObservable();
+
+  isSidebarVisible: boolean = false;
+
+  sidebarVisibilityChange: Subject<boolean> = new Subject<boolean>();
+
+  constructor(private _http: HttpClient) {
+    this.sidebarVisibilityChange.subscribe((value) => {
+      this.isSidebarVisible = value
+    });
+  }
+
+  toggleSidebarVisibility() {
+    this.sidebarVisibilityChange.next(!this.isSidebarVisible);
+  }
+  
+  getStocks(): Observable<IStock[]> {
+    return this._http.get<IStock[]>(this._stockUrl).pipe(tap(), catchError(this.handleError));
+  }
+
+  changeMessage() {
+    this.messageSource.next("new message");
+  }
+
+  private handleError(err) {
+    return throwError(err);
+  }
+}
+
+======================== stock.list.component.ts
+
+import { Component, OnInit } from '@angular/core';
+import { StockService } from './stock.service';
+import { IStock } from './stock';
+import { Observable } from 'rxjs';
+
+function stockSubscriber(observer) {
+  function generateStock() {
+    setTimeout(() => {
+      observer.next(stocksGlobal);
+      generateStock();
+    }, 2000);
+  }
+  generateStock();
+}
+
+const stockGenerator = new Observable(stockSubscriber);
+var stocksGlobal: IStock[];
+var isPositive: boolean = true;
+
+@Component({
+  selector: 'app-stocks',
+  templateUrl: './stock-list.component.html',
+  styleUrls: ['./stock-list.component.css']
+})
+
+export class StockListComponent implements OnInit {
+  stocks: IStock[];
+  filteredStocks: IStock[];
+  errorMessage: string;
+  filterBy: string;
+
+  message: string;
+  constructor(private _stockService: StockService) { }
+
+  get isSidebarVisible(): boolean {
+    return this._stockService.isSidebarVisible;
+  }
+
+  isvisible: boolean = false;
+  ngOnInit() {
+    this._stockService.sidebarVisibilityChange.subscribe(value => this.isvisible = value);
+    this._stockService.currentMessage.subscribe(m => this.message = m);
+    this._stockService.toggleSidebarVisibility();
+
+    this._stockService.changeMessage();
+
+   // this._stockService.sidebarVisibilityChange.subscribe(value => this.isvisible = value);
+    this._stockService.currentMessage.subscribe(m => this.message = m);
+    this._stockService.getStocks()
+      .subscribe(stocks => {
+        this.stocks = stocks;
+        this.stocks.forEach(item => {
+          calculatePercentage(item)
+        });
+        this.filteredStocks = this.stocks;
+        stocksGlobal = this.filteredStocks;
+      },
+        error => this.errorMessage = <any>error);
+
+    stockGenerator.subscribe({
+      next(stocks) {
+        this.stocksGlobal = stocks;
+        let randNumber: number = isPositive ? Math.random() - 1 : Math.random() + 0.3;
+        isPositive = !isPositive;
+
+        this.stocksGlobal.forEach(stock => {
+          stock.currentPrice += randNumber;
+          calculatePercentage(stock);
+        });
+        this.filteredStocks = this.stocksGlobal;
+      },
+      complete() { console.log('Finished'); }
+    });
+  }
+
+  SearchStock() {
+    this.filteredStocks = this.stocks.filter((stock: IStock) =>
+      stock.symbol.toLocaleLowerCase().indexOf(this.filterBy.toLocaleLowerCase()) !== -1);
+  }
+}
+
+function calculatePercentage(stock: IStock) {
+  stock.valueDate = new Date().toString();
+  stock.percentChange = ((stock.currentPrice - stock.openingPrice) / stock.openingPrice) * 100;
+
+  if (stock.openingPrice > stock.currentPrice) {
+    stock.stockStatus = 'negative-stock';
+  } else if (stock.openingPrice < stock.currentPrice) {
+    stock.stockStatus = 'positive-stock';
+  } else {
+    stock.stockStatus = '';
+  }
+}
+
+======================== stocklist.component.html
+
+<div class='container'>
+  <div *ngIf="isvisible" class='row' style="margin-top: 3vmax">
+    <div class='col-md-3 form-group' style="margin-left: 1em;">
+      <label class="control-label">Symbol Search</label>
+      <input class="form-control" type='text' [(ngModel)]='filterBy' />
+    </div>
+    <div class='col-md-2'>
+      <input type='button' value="Search" class="btn btn-primary" style="margin-top: 2em;" (click)="SearchStock()" />
+    </div>
+  </div>
+
+  <div class=' col-md-12 table-responsive'>
+    <table class='table table-bordered' *ngIf='stocks && stocks.length'>
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Value Date</th>
+          <th>Opening Price</th>
+          <th>Currenct Price</th>
+          <th>%Change</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor='let stock of filteredStocks'>
+          <td>{{ stock.symbol | uppercase }}</td>
+          <td>{{ stock.valueDate | date: 'dd/MM/yyyy' }}</td>
+          <td>{{ stock.openingPrice | number : '1.2-2'  }}</td>
+          <td>{{ stock.currentPrice | number : '1.2-2' }}</td>
+          <td class="{{ stock.stockStatus }}">{{ stock.percentChange | number : '1.2-2' }} %</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
 ========================
 ========================
 ========================
