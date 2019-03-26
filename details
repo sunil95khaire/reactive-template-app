@@ -1095,7 +1095,396 @@ function calculatePercentage(stock: IStock) {
   </div>
 
 </div>
-========================
-========================
-========================
-========================
+======================== patient.service.ts
+
+import { City } from './../models/city';
+import { State } from './../models/state';
+import { Patient } from './../models/patient';
+import { Injectable } from '@angular/core';
+import { Observable, BehaviorSubject, Subject } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { tap, catchError } from 'rxjs/operators';
+
+const httpOptions = {
+  headers: new HttpHeaders({ 'Content-Type': 'application/json' })
+};
+
+@Injectable({
+  providedIn: 'root'
+})
+export class PatientService {
+
+  private subject = new Subject<any>();
+
+  sendMessage(message: string) {
+    this.subject.next({ text: message });
+  }
+
+  clearMessage() {
+    this.subject.next();
+  }
+
+  getMessage(): Observable<any> {
+    return this.subject.asObservable();
+  }
+
+  session: string;
+  sidebarVisibilityChange: Subject<string> = new Subject<string>();
+
+  private _baseUrl = 'http://localhost:50660/api/Patient/';
+
+  constructor(private _http: HttpClient) {
+    this.sidebarVisibilityChange.subscribe((value) => {
+      this.session = value
+    });
+  }
+
+  getPatients(): Observable<Patient[]> {
+    let url = this._baseUrl + 'GetPatients';
+    return this._http.get<Patient[]>(url).pipe(tap(), catchError(this.handleError));
+  }
+
+  getStates(): Observable<State[]> {
+    let url = this._baseUrl + 'GetStates';
+    return this._http.get<State[]>(url).pipe(tap(), catchError(this.handleError));
+  }
+
+  getCities(): Observable<City[]> {
+    let url = this._baseUrl + 'GetCities';
+    return this._http.get<City[]>(url).pipe(tap(), catchError(this.handleError));
+  }
+
+  getStateCities(stateId: number): Observable<City[]> {
+    let url = this._baseUrl + 'GetStateCities?stateId=' + stateId;
+    return this._http.get<City[]>(url).pipe(tap(), catchError(this.handleError));
+  }
+
+  savePatient(patient: Patient): Observable<any> {
+    let url = this._baseUrl + 'SavePatient';
+    let body = JSON.stringify(patient);
+    return this._http.post(url, body, httpOptions).pipe(tap(), catchError(this.handleError));
+  }
+
+  private handleError(error: Response) {
+    console.error(error);
+    return Observable.throw(error.json() || 'Server error');
+  }
+}
+
+======================== patient-list.html
+
+<label class="navbar-brand">Patient List</label>   
+<div class='table-responsive'>
+  <table class='table table-bordered' *ngIf='patients && patients.length'>
+    <thead style="border-bottom: 0">
+      <tr>
+        <th>Name</th>
+        <th>SurName</th>
+        <th>DOB</th>
+        <th>Gender</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor='let patient of patients' (click)="patientClick(patient.Name)">
+        <td><a routerLink="/detail/{{patient.Name}}" >{{ patient.Name }}</a></td>
+        <td>{{ patient.SurName }}</td>
+        <td>{{ patient.DOB | date: 'dd-MM-yyyy' }}</td>
+        <td>{{ patient.Gender }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- <button (click)="sendMessage()" class="btn btn-primary">Send Message</button>
+<button (click)="clearMessage()" class="btn btn-secondary">Clear Message</button> -->
+
+======================== create-patient.component.ts
+
+import { City } from "./../models/city";
+import { PatientService } from "./patient.service";
+import { State } from "./../models/state";
+import { Patient } from "./../models/patient";
+import { Component, OnInit } from "@angular/core";
+import { NgForm } from "@angular/forms";
+import { Router, ActivatedRoute } from "@angular/router";
+import { IfStmt } from "@angular/compiler";
+
+@Component({
+  selector: "app-create-patient",
+  templateUrl: "./create-patient.component.html"
+  //styleUrls: ["./create-patient.component.css"]
+})
+export class CreatePatientComponent implements OnInit {
+  patients: Patient[];
+  states: State[];
+  cities: City[];
+  errorMessage: string;
+  minAge: Date;
+  maxAge: Date;
+  isEdit: boolean;
+  name: string;
+
+  patient: Patient = new Patient();
+
+  constructor(
+    private service: PatientService,
+    private router: Router,
+    private route: ActivatedRoute
+  ) {}
+
+  ngOnInit() {
+    //const name = this.route.snapshot.paramMap.get("name");
+    this.route.params.subscribe(params => {
+      this.name = params['name'];
+      this.initialiseState(); // reset and set based on new parameter this time
+  });
+    this.patient.CityId = -1;
+    this.patient.StateId = -1;
+    this.patient.Gender = null;
+    var today = new Date();
+    this.minAge = new Date(
+      today.getFullYear() - 100,
+      today.getMonth(),
+      today.getDate()
+    );
+    this.maxAge = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    this.service.getStates().subscribe(
+      states => {
+        this.states = states;
+      },
+      error => (this.errorMessage = <any>error)
+    );
+
+    this.isEdit = this.name != "0" && this.name != "null";
+    if (this.isEdit) {
+      this.service.getCities().subscribe(
+        cities => {
+          this.cities = cities;
+          this.getPatientList(this.name);
+        },
+        error => (this.errorMessage = <any>error)
+      );
+    }
+  }
+
+  initialiseState(){
+this.patient = new Patient();
+  }
+
+  getCities() {
+    this.service.getStateCities(this.patient.StateId).subscribe(
+      cities => {
+        this.cities = cities;
+      },
+      error => (this.errorMessage = <any>error)
+    );
+  }
+
+  getPatientList(name) {
+    this.service.getPatients().subscribe(
+      patients => {
+        this.patients = patients;
+        this.patient = this.patients.find(p => p.Name == name);
+        var city = this.cities.find(c => c.Id == this.patient.CityId);
+        this.patient.StateId = city.StateId;
+        this.cities = this.cities.filter(
+          c => c.StateId == this.patient.StateId
+        );
+        this.patient.DOB = new Date();
+      },
+      error => (this.errorMessage = <any>error)
+    );
+  }
+
+  getPatients() {
+    this.navigateToPatientList();
+    // this.service.getPatients().subscribe(patients => {
+    //   this.patients = patients;
+    // }, error => (this.errorMessage = <any>error));
+  }
+
+  savePatient(patientForm: NgForm): void {
+    var pat = Object.assign({}, this.patient);
+    this.service.savePatient(pat).subscribe(
+      pat => {
+        //this.getPatients();
+        this.navigateToPatientList();
+      },
+      error => (this.errorMessage = <any>error)
+    );
+    patientForm.reset();
+  }
+
+  navigateToPatientList() {
+    this.router.navigate(["/home"]);
+  }
+
+  keyPress(event: any) {
+    const pattern = /[a-zA-Z \-\']/;
+    let inputChar = String.fromCharCode(event.charCode);
+
+    if (!pattern.test(inputChar)) {
+      event.preventDefault();
+    }
+  }
+}
+
+======================== create-patient.component.html
+
+<!-- <app-customer-dashboard></app-customer-dashboard> -->
+<label class="navbar-brand">Add Patient</label>   
+<form #patientForm="ngForm" (ngSubmit)="savePatient(patientForm)">
+  <div class="row">
+    <div class="col-md-6">
+      <div class="form-group" [class.was-validated]="patientname.invalid && patientname.touched">
+        <label for="patientname" class="form-control-label">Name</label>
+        <input (keypress)="keyPress($event)" type="text" name="patientname" placeholder="Enter Name" required class="form-control"
+          id="patientname" [(ngModel)]="patient.Name" #patientname="ngModel">
+        <div class="invalid-feedback" *ngIf="patientname.invalid && patientname.touched">Name is mandatory.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="patientDob" class="form-control-label">Birth Date</label>
+        <input max="{{maxAge | date:'yyyy-MM-dd'}}" min="{{minAge | date:'yyyy-MM-dd'}}" type="date" name="patientDob" placeholder="DD/MM/YYYY" required class="form-control" id="patientDob" [(ngModel)]="patient.DOB"
+          #patientDob="ngModel">
+      </div>
+
+      <div class="form-group" [class.was-validated]="state.invalid && state.touched">
+        <label for="state" class="form-control-label">State</label>
+        <select id="state" name="state" required class="form-control" (change)="getCities()" [(ngModel)]="patient.StateId" #state="ngModel">
+          <option [value]="-1">Select State</option>
+          <option [value]="state.Id" *ngFor="let state of states">{{state.Name}}</option>
+        </select>
+        <div class="invalid-feedback" *ngIf="state.invalid && state.touched">State is mandatory.</div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="form-group" [class.was-validated]="surNameControl.invalid && surNameControl.touched">
+        <label for="surName" class="form-control-label">SurName</label>
+        <input (keypress)="keyPress($event)" type="text" name="surName" placeholder="Enter SurName" required class="form-control"
+          id="surName" [(ngModel)]="patient.SurName" #surNameControl="ngModel">
+        <div class="invalid-feedback" *ngIf="surNameControl.invalid && surNameControl.touched">SurName is mandatory.</div>
+      </div>
+
+      <div class="form-group" [class.was-validated]="gender.invalid && gender.touched">
+        <label for="gender" class="form-control-label">Gender</label>
+        <select id="gender" name="gender" required class="form-control" [(ngModel)]="patient.Gender" #gender="ngModel">
+          <option [value]="null">Select Gender</option>
+          <option value='M'>Male</option>
+          <option value='F'>Female</option>
+        </select>
+        <div class="invalid-feedback" *ngIf="gender.invalid && gender.touched">Gender is mandatory.</div>
+      </div>
+
+      <div class="form-group" [class.was-validated]="city.invalid && city.touched">
+        <label for="city" class="form-control-label">City</label>
+        <select id="city" name="city" required class="form-control" [(ngModel)]="patient.CityId" #city="ngModel">
+          <option [value]="-1">Select City</option>
+          <option [value]="city.Id" *ngFor="let city of cities">{{city.Name}}</option>
+        </select>
+        <div class="invalid-feedback" *ngIf="city.invalid && city.touched">City is mandatory.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class=col-md-11>
+      <input type="button" (click)="getPatients()" value="Cancel" class="btn btn-primary pull-left" />
+    </div>
+    <button style="margin-left: 1em" [disabled]="patientForm.invalid" type="submit" class="btn btn-primary pull-right">Save</button>
+  </div>
+
+<br>
+
+<!-- <app-list-patients [patients]="patients"></app-list-patients> -->
+
+</form>
+
+===== patient-detail.component.ts
+<label class="navbar-brand">Patient Details</label> 
+<div *ngIf="patient">
+  <div class="row">
+    <label class="col-md-2 font-bold">Name</label>
+    <label class="col-md-4 form-control-label">{{ patient.Name }}</label>
+  </div>
+
+  <div class="row">
+    <label class="col-md-2 font-bold">Surname</label>
+    <label class="col-md-4 form-control-label">{{ patient.SurName }}</label>
+  </div>
+
+  <div class="row">
+    <label class="col-md-2 font-bold">DOB</label>
+    <label class="col-md-4 form-control-label">{{ patient.DOB }}</label>
+  </div>
+
+  <div class="row">
+    <label class="col-md-2 font-bold">Gender</label>
+    <label class="col-md-4 form-control-label">{{ patient.Gender }}</label>
+  </div>
+
+  <div class="row">
+    <label class="col-md-2 font-bold">State</label>
+    <label class="col-md-4 form-control-label">{{ patient.StateId }}</label>
+  </div>
+
+  <div class="row">
+    <label class="col-md-2 font-bold">City</label>
+    <label class="col-md-4 form-control-label">{{ patient.CityId }}</label>
+  </div>
+
+  <div class="row">
+    <div class=col-md-11>
+      <input type="button" (click)="goBack()" value="Back" class="btn btn-primary pull-left" />
+    </div>
+    <button style="margin-left: 1em" [routerLink]="['/create', patient.Name]" 
+    class="btn btn-primary pull-right">Edit</button>
+  </div>
+</div>
+
+=======patient-detail.component.ts
+
+import { Component, OnInit } from '@angular/core';
+import { PatientService } from '../patient.service';
+import { Router, ActivatedRoute } from '@angular/router';
+import { Patient } from 'src/app/models/patient';
+import { Location } from '@angular/common';
+import { State } from 'src/app/models/state';
+
+@Component({
+  selector: 'app-patient-detail',
+  templateUrl: './patient-detail.component.html',
+  styleUrls: ['./patient-detail.component.css']
+})
+export class PatientDetailComponent implements OnInit {
+
+  patient: Patient;
+  patients: Patient[];
+  states: State[];
+
+  constructor(private service: PatientService, private route: ActivatedRoute,
+    private router: Router, private location: Location) { }
+
+  ngOnInit() {
+    this.service.getPatients().subscribe(patients => {
+      this.patients = patients;
+      const name = this.route.snapshot.paramMap.get('name');
+      this.patient = this.patients.find(p => p.Name == name);
+    });
+  }
+
+  goBack(){
+    this.location.back();
+  }
+
+  editPatient() {
+    this.router.navigate(['/create', this.patient.Name]);
+  }
+}
+
