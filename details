@@ -1540,3 +1540,87 @@ export class SelectRequiredValidatorDirective implements Validator {
         </select>
         <div class="invalid-feedback11" *ngIf="state.touched && state.errors?.defaultselected">State is mandatory.</div>
       </div>
+      
+      ===================================================
+      
+      <!-- <app-customer-dashboard></app-customer-dashboard> -->
+<label class="navbar-brand">Add Patient</label>   
+<form #patientForm="ngForm" (ngSubmit)="savePatient(patientForm)">
+  <div class="row">
+    <div class="col-md-6">
+      <div class="form-group" [class.was-validated]="patientname.invalid && patientname.touched">
+        <label for="patientname" class="form-control-label">Name</label>
+        <input (keypress)="keyPress($event)" type="text" name="patientname" placeholder="Enter Name" required class="form-control"
+          id="patientname" [(ngModel)]="patient.Name" #patientname="ngModel">
+        <div class="invalid-feedback" *ngIf="patientname.invalid && patientname.touched">Name is mandatory.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="patientDob" class="form-control-label">Birth Date</label>
+        <input max="{{maxAge | date:'yyyy-MM-dd'}}" min="{{minAge | date:'yyyy-MM-dd'}}" 
+        [ngClass]="{'invalid-control' : patientDob.touched && patientDob.invalid}" type="date" name="patientDob"
+         placeholder="DD/MM/YYYY" required class="form-control" id="patientDob" [(ngModel)]="patient.DOB"
+          #patientDob="ngModel">
+          <div class="invalid-feedback11" *ngIf="patientDob.invalid && patientDob.touched">DOB is mandatory.</div>
+      </div>
+
+      <div class="form-group" >
+        <label for="state" class="form-control-label">State</label>
+        <select appSelectRequiredValidator="-1" id="state" name="state" class="form-control" (change)="getCities()" 
+        [(ngModel)]="patient.StateId" #state="ngModel"  
+        [ngClass]="{'invalid-control' : state.touched && state.errors?.defaultselected}">
+          <option value="-1">Select State</option>
+          <option [value]="state.Id" *ngFor="let state of states">{{state.Name}}</option>
+        </select>
+        <div class="invalid-feedback11" *ngIf="state.touched && state.errors?.defaultselected">State is mandatory.</div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="form-group" [class.was-validated]="surNameControl.invalid && surNameControl.touched">
+        <label for="surName" class="form-control-label">SurName</label>
+        <input (keypress)="keyPress($event)" type="text" name="surName" placeholder="Enter SurName" required class="form-control"
+          id="surName" [(ngModel)]="patient.SurName" #surNameControl="ngModel">
+        <div class="invalid-feedback11" *ngIf="surNameControl.invalid && surNameControl.touched">SurName is mandatory.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="gender" class="form-control-label">Gender</label>
+        <select appSelectRequiredValidator="-1" id="gender" name="gender" class="form-control" 
+        [ngClass]="{'invalid-control' : gender.touched && gender.errors?.defaultselected}" 
+        [(ngModel)]="patient.Gender" #gender="ngModel">
+          <option value="-1">Select Gender</option>
+          <option value='M'>Male</option>
+          <option value='F'>Female</option>
+        </select>
+        <div class="invalid-feedback11" *ngIf="gender.touched && gender.errors?.defaultselected">Gender is mandatory.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="city" class="form-control-label">City</label>
+        <select appSelectRequiredValidator="-1" id="city" name="city" required class="form-control" 
+        [ngClass]="{'invalid-control' : city.touched && city.errors?.defaultselected}" 
+        [(ngModel)]="patient.CityId" #city="ngModel">
+          <option [value]="-1">Select City</option>
+          <option [value]="city.Id" *ngFor="let city of cities">{{city.Name}}</option>
+        </select>
+        <div class="invalid-feedback11" *ngIf="city.errors?.defaultselected && city.touched">City is mandatory.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class=col-md-11>
+      <input type="button" (click)="getPatients()" value="Cancel" class="btn btn-primary pull-left" />
+    </div>
+    <button style="margin-left: 1em" [disabled]="patientForm.invalid" type="submit" class="btn btn-primary pull-right">Save</button>
+  </div>
+
+<br>
+
+<!-- <app-list-patients [patients]="patients"></app-list-patients> -->
+
+</form>
+
+
+
