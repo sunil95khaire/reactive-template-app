@@ -1,6 +1,9 @@
 styles.css
 Add in angular.json file under assets tag : "src/api"
 
+npm install -g @angular/cli
+npm install bootstrap
+
 /* You can add global styles to this file, and also import other style files */
 .negative-stock{
     background-color: red;    
