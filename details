@@ -1495,3 +1495,48 @@ export class PatientDetailComponent implements OnInit {
   }
 }
 
+=========================================================select required validator
+
+import { Directive, Input } from "@angular/core";
+import {  NG_VALIDATORS,  Validator,  AbstractControl,  ValidationErrors} from "@angular/forms";
+
+@Directive({
+  selector: "[appSelectRequiredValidator]",
+  providers: [
+    {
+      provide: NG_VALIDATORS,
+      useExisting: SelectRequiredValidatorDirective,
+      multi: true
+    }
+  ]
+})
+export class SelectRequiredValidatorDirective implements Validator {
+  @Input() appSelectRequiredValidator: string;
+  validate(c: AbstractControl): ValidationErrors {
+    let res = c.value === this.appSelectRequiredValidator ? { 'defaultselected': true } : null;
+    return res;
+  }
+}
+
+======================================================
+ this.patient.StateId = '-1';
+ 
+.invalid-feedback11 {
+    width: 100%;
+    margin-top: .25rem;
+    font-size: 80%;
+    color: #dc3545;
+}
+
+.invalid-control {
+    border-color: #dc3545;
+}
+
+<div class="form-group" >
+        <label for="state" class="form-control-label">State</label>
+        <select appSelectRequiredValidator="-1" id="state" name="state" class="form-control" (change)="getCities()" [(ngModel)]="patient.StateId" #state="ngModel"  [ngClass]="{'invalid-control' : state.touched && state.errors?.defaultselected}">
+          <option value="-1">Select State</option>
+          <option [value]="state.Id" *ngFor="let state of states">{{state.Name}}</option>
+        </select>
+        <div class="invalid-feedback11" *ngIf="state.touched && state.errors?.defaultselected">State is mandatory.</div>
+      </div>
