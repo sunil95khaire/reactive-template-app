@@ -1,6 +1,10 @@
 styles.css
 Add in angular.json file under assets tag : "src/api"
 
+numbers -  /^[0-9]*$/
+alphabets - /[a-zA-Z \-\']/
+alphabets and numbers - /^[a-zA-Z0-9_.-]*$/
+
 npm install -g @angular/cli
 npm install bootstrap
 
